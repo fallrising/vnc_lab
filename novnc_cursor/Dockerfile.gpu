@@ -1,0 +1,93 @@
+# novnc_cursor_gpu - Cursor IDE with GPU Acceleration
+# Based on novnc_base with Cursor IDE and AMD GPU support
+
+FROM vnc-base:latest
+
+USER root
+
+# Install additional dependencies for Cursor IDE and AMD GPU support
+RUN apt-get update && apt-get install -y \
+    wget \
+    curl \
+    gnupg2 \
+    software-properties-common \
+    apt-transport-https \
+    ca-certificates \
+    mesa-utils \
+    libgl1-mesa-glx \
+    libgl1-mesa-dri \
+    mesa-vulkan-drivers \
+    libvulkan1 \
+    vulkan-tools \
+    libdrm2 \
+    libdrm-common \
+    libdrm-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Download and install Cursor IDE
+RUN wget -O /tmp/cursor.deb "https://download.cursor.sh/linux/appImage/x64" \
+    && dpkg -i /tmp/cursor.deb || true \
+    && apt-get install -f -y \
+    && rm /tmp/cursor.deb \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create user for better security
+RUN useradd -m -s /bin/bash cursor \
+    && mkdir -p /home/cursor/workspace \
+    && chown -R cursor:cursor /home/cursor
+
+# Create Cursor profile directory for persistence
+RUN mkdir -p /home/cursor/.config/Cursor \
+    && chown -R cursor:cursor /home/cursor/.config
+
+# Install Node.js (required for Cursor IDE)
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+# Download and install Cursor IDE
+RUN wget -O /tmp/cursor.deb "https://download.cursor.sh/linux/appImage/x64" \
+    && dpkg -i /tmp/cursor.deb || true \
+    && apt-get install -f -y \
+    && rm /tmp/cursor.deb \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create user for better security
+RUN useradd -m -s /bin/bash cursor \
+    && mkdir -p /home/cursor/workspace \
+    && chown -R cursor:cursor /home/cursor
+
+# Create Cursor profile directory for persistence
+RUN mkdir -p /home/cursor/.config/Cursor \
+    && chown -R cursor:cursor /home/cursor/.config
+
+# Create supervisor config for Cursor IDE (with AMD GPU support)
+RUN echo '[program:cursor]' > /app/conf.d/cursor.conf && \
+    echo 'command=/usr/bin/cursor --display=:0 --enable-gpu-rasterization --enable-zero-copy' >> /app/conf.d/cursor.conf && \
+    echo 'environment=DISPLAY=":0",HOME="/home/cursor",MESA_GL_VERSION_OVERRIDE="4.5",MESA_GLSL_VERSION_OVERRIDE="450"' >> /app/conf.d/cursor.conf && \
+    echo 'autorestart=true' >> /app/conf.d/cursor.conf && \
+    echo 'user=cursor' >> /app/conf.d/cursor.conf && \
+    echo 'redirect_stderr=true' >> /app/conf.d/cursor.conf && \
+    echo 'stdout_logfile=/var/log/cursor.log' >> /app/conf.d/cursor.conf && \
+    echo 'stderr_logfile=/var/log/cursor_error.log' >> /app/conf.d/cursor.conf && \
+    echo 'priority=100' >> /app/conf.d/cursor.conf
+
+# Create log files
+RUN touch /var/log/cursor.log /var/log/cursor_error.log \
+    && chown cursor:cursor /var/log/cursor.log /var/log/cursor_error.log
+
+# Create volume for Cursor profile persistence
+VOLUME ["/home/cursor/.config/Cursor", "/home/cursor/workspace"]
+
+# Expose ports (only for local access - use reverse proxy for external access)
+EXPOSE 6080 5900
+
+# Security: Set proper permissions
+RUN chmod 755 /home/cursor \
+    && chmod 700 /home/cursor/.config
+
+# AMD GPU runtime configuration
+ENV MESA_GL_VERSION_OVERRIDE=4.5
+ENV MESA_GLSL_VERSION_OVERRIDE=450
+ENV LIBGL_ALWAYS_SOFTWARE=0
+ENV MESA_DEBUG=1 
