@@ -1,0 +1,303 @@
+FROM debian:bullseye-slim
+
+# Install required packages in one layer to keep image small
+RUN apt-get update && apt-get install -y \
+    wget \
+    curl \
+    unzip \
+    python3 \
+    python3-pip \
+    x11vnc \
+    xvfb \
+    openbox \
+    firefox-esr \
+    supervisor \
+    vim \
+    htop \
+    gnupg2 \
+    tigervnc-common \
+    expect \
+    net-tools \
+    procps \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Node.js 20.x (required for gemini-cli)
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y nodejs && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install Python packages
+RUN pip3 install websockify
+
+# Install ttyd for terminal access
+RUN wget -O /usr/local/bin/ttyd https://github.com/tsl0922/ttyd/releases/download/1.7.3/ttyd.x86_64 \
+    && chmod +x /usr/local/bin/ttyd
+
+# Install cloudflared for tunnel access
+RUN wget -O cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb \
+    && dpkg -i cloudflared.deb \
+    && rm cloudflared.deb
+
+# Install Atlassian CLI
+RUN mkdir -p -m 755 /etc/apt/keyrings && \
+    wget -nv -O- https://acli.atlassian.com/gpg/public-key.asc | gpg --dearmor -o /etc/apt/keyrings/acli-archive-keyring.gpg && \
+    chmod go+r /etc/apt/keyrings/acli-archive-keyring.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/acli-archive-keyring.gpg] https://acli.atlassian.com/linux/deb stable main" > /etc/apt/sources.list.d/acli.list && \
+    apt-get update && \
+    apt-get install -y acli && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install CLI tools via npm (only essential ones to keep lightweight)
+RUN npm install -g @anthropic-ai/claude-code @google/gemini-cli
+
+# Download and setup noVNC
+RUN mkdir -p /opt/novnc && \
+    curl -sSL https://github.com/novnc/noVNC/archive/v1.4.0.tar.gz | tar xzf - --strip-components=1 -C /opt/novnc
+
+# Create directories
+RUN mkdir -p /opt/scripts /home/firefox-profile
+
+# Create startup script
+RUN cat > /opt/scripts/start.sh << 'EOF'
+#!/bin/bash
+set -e
+
+echo "Starting services..."
+
+# Create log directory
+mkdir -p /var/log/services
+
+# Set default passwords if not provided
+VNC_PASSWORD="${VNC_PASSWORD:-vnc123}"
+TTYD_PASSWORD="${TTYD_PASSWORD:-MyTerminalPassword123}"
+
+echo "Setting up authentication..."
+echo "VNC Password: $VNC_PASSWORD"
+echo "TTYD Password: $TTYD_PASSWORD"
+
+# Create VNC password file
+mkdir -p /root/.vnc
+echo "$VNC_PASSWORD" | vncpasswd -f > /root/.vnc/passwd
+chmod 600 /root/.vnc/passwd
+
+# Start Xvfb
+echo "Starting Xvfb..."
+Xvfb :1 -screen 0 1024x768x16 -ac -listen tcp > /var/log/services/xvfb.log 2>&1 &
+XVFB_PID=$!
+echo "Xvfb started with PID: $XVFB_PID"
+sleep 3
+
+# Start window manager
+echo "Starting openbox..."
+DISPLAY=:1 openbox > /var/log/services/openbox.log 2>&1 &
+OPENBOX_PID=$!
+echo "Openbox started with PID: $OPENBOX_PID"
+sleep 2
+
+# Start x11vnc with simplified settings - FIXED VERSION
+echo "Starting x11vnc..."
+x11vnc -display :1 -rfbauth /root/.vnc/passwd -forever -shared \
+       -rfbport 5900 -listen 0.0.0.0 \
+       > /var/log/services/x11vnc.log 2>&1 &
+X11VNC_PID=$!
+echo "x11vnc started with PID: $X11VNC_PID"
+sleep 5
+
+# Verify x11vnc is actually running and listening
+echo "Verifying x11vnc is running..."
+if ! kill -0 $X11VNC_PID 2>/dev/null; then
+    echo "ERROR: x11vnc failed to start!"
+    echo "x11vnc log contents:"
+    cat /var/log/services/x11vnc.log
+    exit 1
+fi
+
+# Check if port 5900 is listening
+if ! netstat -ln | grep -q ":5900"; then
+    echo "ERROR: x11vnc is not listening on port 5900!"
+    echo "Current listening ports:"
+    netstat -ln | grep LISTEN
+    echo "x11vnc log contents:"
+    cat /var/log/services/x11vnc.log
+    exit 1
+fi
+
+echo "x11vnc verified - listening on port 5900"
+
+# Start websockify with better connection handling
+echo "Starting websockify..."
+websockify --web /opt/novnc --heartbeat 30 --timeout 0 6080 localhost:5900 \
+    > /var/log/services/websockify.log 2>&1 &
+WEBSOCKIFY_PID=$!
+echo "websockify started with PID: $WEBSOCKIFY_PID"
+sleep 2
+
+# Start ttyd terminal with credential authentication
+echo "Starting ttyd with authentication..."
+ttyd -p 7681 -i 0.0.0.0 -c "admin:$TTYD_PASSWORD" --ping-interval 30 bash \
+    > /var/log/services/ttyd.log 2>&1 &
+TTYD_PID=$!
+echo "ttyd started with PID: $TTYD_PID"
+sleep 1
+
+# Start cloudflared if token is provided
+if [ ! -z "$TUNNEL_TOKEN" ]; then
+    echo "Starting cloudflared tunnel..."
+    cloudflared tunnel run --token $TUNNEL_TOKEN > /var/log/services/cloudflared.log 2>&1 &
+    CLOUDFLARED_PID=$!
+    echo "cloudflared started with PID: $CLOUDFLARED_PID"
+fi
+
+# Start Firefox with better stability
+echo "Starting Firefox..."
+sleep 5
+DISPLAY=:1 firefox-esr --new-instance --profile /home/firefox-profile \
+         --no-sandbox --disable-dev-shm-usage --disable-gpu \
+         > /var/log/services/firefox.log 2>&1 &
+FIREFOX_PID=$!
+echo "Firefox started with PID: $FIREFOX_PID"
+
+echo "All services started. Container ready."
+echo "===== ACCESS INFORMATION ====="
+echo "noVNC Desktop: http://localhost:6080 (VNC Password required: $VNC_PASSWORD)"
+echo "Web Terminal: http://localhost:7681 (Username: admin, Password: $TTYD_PASSWORD)"
+echo "================================"
+echo "Log files available in /var/log/services/"
+
+# Improved monitoring loop with service restart capabilities
+while true; do
+    sleep 30
+    
+    # Check and restart Xvfb if needed
+    if ! kill -0 $XVFB_PID 2>/dev/null; then
+        echo "$(date): Xvfb died, restarting..." >> /var/log/services/monitor.log
+        Xvfb :1 -screen 0 1024x768x16 -ac -listen tcp > /var/log/services/xvfb.log 2>&1 &
+        XVFB_PID=$!
+        sleep 2
+    fi
+    
+    # Check and restart x11vnc if needed
+    if ! kill -0 $X11VNC_PID 2>/dev/null; then
+        echo "$(date): x11vnc died, restarting..." >> /var/log/services/monitor.log
+        x11vnc -display :1 -rfbauth /root/.vnc/passwd -forever -shared \
+               -rfbport 5900 -listen 0.0.0.0 \
+               > /var/log/services/x11vnc.log 2>&1 &
+        X11VNC_PID=$!
+        sleep 2
+    fi
+    
+    # Check and restart websockify if needed
+    if ! kill -0 $WEBSOCKIFY_PID 2>/dev/null; then
+        echo "$(date): websockify died, restarting..." >> /var/log/services/monitor.log
+        websockify --web /opt/novnc --heartbeat 30 --timeout 0 6080 localhost:5900 \
+            > /var/log/services/websockify.log 2>&1 &
+        WEBSOCKIFY_PID=$!
+        sleep 2
+    fi
+    
+    # Log status
+    echo "$(date): Services running normally" >> /var/log/services/monitor.log
+done
+EOF
+
+RUN chmod +x /opt/scripts/start.sh
+
+# Create improved monitoring script for debugging
+RUN cat > /opt/scripts/debug.sh << 'EOF'
+#!/bin/bash
+echo "=== VNC Debug Information ==="
+echo "Date: $(date)"
+echo ""
+
+echo "=== Process Status ==="
+ps aux | grep -E "(Xvfb|x11vnc|websockify|firefox|ttyd)" | grep -v grep
+echo ""
+
+echo "=== Port Status ==="
+netstat -ln | grep -E "(5900|6080|7681)" || echo "netstat command available now"
+echo ""
+
+echo "=== VNC Password File ==="
+if [ -f /root/.vnc/passwd ]; then
+    echo "VNC password file exists"
+    ls -la /root/.vnc/passwd
+else
+    echo "VNC password file missing!"
+fi
+echo ""
+
+echo "=== TTYD Credentials ==="
+echo "TTYD will use: admin:${TTYD_PASSWORD:-MyTerminalPassword123}"
+echo ""
+
+echo "=== Recent X11VNC Logs ==="
+if [ -f /var/log/services/x11vnc.log ]; then
+    echo "Last 15 lines of x11vnc.log:"
+    tail -15 /var/log/services/x11vnc.log
+else
+    echo "No x11vnc.log found"
+fi
+echo ""
+
+echo "=== Recent Websockify Logs ==="
+if [ -f /var/log/services/websockify.log ]; then
+    echo "Last 15 lines of websockify.log:"
+    tail -15 /var/log/services/websockify.log
+else
+    echo "No websockify.log found"
+fi
+echo ""
+
+echo "=== Recent TTYD Logs ==="
+if [ -f /var/log/services/ttyd.log ]; then
+    echo "Last 10 lines of ttyd.log:"
+    tail -10 /var/log/services/ttyd.log
+else
+    echo "No ttyd.log found"
+fi
+echo ""
+
+echo "=== System Resources ==="
+free -h
+df -h /tmp
+echo ""
+
+echo "=== X Display Info ==="
+DISPLAY=:1 xdpyinfo 2>/dev/null | head -10 || echo "Cannot connect to X display"
+echo ""
+
+echo "=== Network Connections ==="
+netstat -an | grep -E "(5900|6080|7681)" || echo "No connections found"
+
+echo ""
+echo "=== Test VNC Connection ==="
+timeout 5 nc -z localhost 5900 && echo "Port 5900 is accessible" || echo "Port 5900 is NOT accessible"
+EOF
+
+RUN chmod +x /opt/scripts/debug.sh
+
+# Create supervisor config - simplified single program approach
+RUN cat > /etc/supervisor/conf.d/services.conf << 'EOF'
+[supervisord]
+nodaemon=true
+user=root
+
+[program:services]
+command=/opt/scripts/start.sh
+autostart=true
+autorestart=true
+stdout_logfile=/var/log/services.log
+stderr_logfile=/var/log/services.log
+EOF
+
+# Create log file
+RUN touch /var/log/services.log
+
+# Create volume for Firefox profile persistence
+VOLUME ["/home/firefox-profile"]
+
+# Expose ports
+EXPOSE 6080 5900 7681
+
+# Start supervisor
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/supervisord.conf"]
