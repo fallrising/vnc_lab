@@ -54,6 +54,9 @@ RUN npm install -g @anthropic-ai/claude-code @google/gemini-cli
 RUN mkdir -p /opt/novnc && \
     curl -sSL https://github.com/novnc/noVNC/archive/v1.4.0.tar.gz | tar xzf - --strip-components=1 -C /opt/novnc
 
+# Add custom index.html for subdomain compatibility
+COPY index.html /opt/novnc/index.html
+
 # Create directories
 RUN mkdir -p /opt/scripts /home/firefox-profile
 
