@@ -48,6 +48,15 @@
   - 實現動態 WebSocket URL 解析
 - **修復方式**: 創建外部文件並使用 `COPY` 指令
 
+#### 6. **novnc_llm_cli/Dockerfile.add_validation** (驗證版本)
+- **狀態**: ✅ 已修復
+- **基礎鏡像**: `FROM debian:bullseye-slim`
+- **修復內容**:
+  - 添加自定義 `index.html` 支持
+  - 保持認證和驗證功能
+  - 支持 Cloudflare Tunnel 部署
+- **修復方式**: 使用相同的 `index.html` 文件
+
 ## 修復詳情
 
 ### 核心修復內容
@@ -153,12 +162,13 @@ services:
 
 ## 結論
 
-✅ **所有容器現在都支持子域名訪問**
+✅ **所有 6 個容器現在都支持子域名訪問**
 
 1. **novnc_base, novnc_warp, novnc_cursor**: 完全兼容
 2. **novnc_tool, novnc_llm_cli**: 已修復，完全兼容
-3. **Cloudflare Tunnel**: 所有容器都支持
-4. **安全性**: 通過網絡隔離和訪問控制保障
+3. **novnc_llm_cli/Dockerfile.add_validation**: 已修復，完全兼容
+4. **Cloudflare Tunnel**: 所有容器都支持
+5. **安全性**: 通過網絡隔離和訪問控制保障
 
 ## 下一步
 
