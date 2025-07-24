@@ -1,217 +1,197 @@
-# novnc_base - Basic VNC Desktop Environment
+# VNC Lab - noVNC Base
 
-A lightweight VNC desktop environment based on Debian Bullseye with noVNC support for web-based remote desktop access.
+一個基於 Docker 的 VNC 實驗室環境，提供 Web 瀏覽器訪問的遠程桌面功能。
 
-## Overview
+## 功能特點
 
-This container provides a basic remote desktop environment with:
-- Debian Bullseye slim base image
-- noVNC 1.4.0 for web-based VNC access
-- x11vnc server for VNC connectivity
-- Firefox ESR browser
-- Openbox window manager
-- Supervisor for process management
+- **Web 瀏覽器訪問**：通過 noVNC 在瀏覽器中直接訪問 VNC 桌面
+- **動態配置**：支持環境變量和命令行參數配置
+- **Cloudflare Tunnel 兼容**：完美支持 Cloudflare Tunnel Zero Trust
+- **子域名支持**：自動適配任何子域名，無需額外配置
+- **容器化部署**：基於 Docker，易於部署和管理
 
-## Features
+## 項目結構
 
-- **Web-based Access**: Access desktop through any modern web browser
-- **Lightweight**: Based on Debian Bullseye slim for minimal resource usage
-- **Firefox Browser**: Pre-installed Firefox ESR for web browsing
-- **Process Management**: Supervisor ensures all services stay running
-- **No Authentication**: Simple setup without password requirements (for development/testing)
+```
+novnc_base/
+├── Dockerfile                    # 主要容器構建文件
+├── README.md                     # 項目文檔
+├── run.sh                        # 容器啟動腳本
+├── build.sh                      # 鏡像構建腳本
+├── clean.sh                      # 清理腳本
+├── export.sh                     # 鏡像導出腳本
+├── import.sh                     # 鏡像導入腳本
+├── push.sh                       # 鏡像推送腳本
+├── test-cloudflare.sh            # Cloudflare Tunnel 兼容性測試
+├── test-subdomain-local.sh       # 本地子域名測試腳本
+├── cleanup-test.sh               # 測試環境清理腳本
+├── docker-compose.cloudflare.yml # Cloudflare Tunnel 部署配置
+├── CLOUDFLARE-TUNNEL-GUIDE.md    # Cloudflare Tunnel 部署指南
+├── TROUBLESHOOTING-SUBDOMAIN.md  # 子域名問題排查指南
+├── deploy-subdomain.sh           # 子域名部署腳本（已棄用）
+├── docker-compose.subdomain.yml  # 子域名部署配置（已棄用）
+└── nginx-subdomain.conf          # Nginx 配置（已棄用）
+```
 
-## Quick Start
+### 核心文件說明
 
-### Build the Image
+#### 主要文件
+- **`Dockerfile`**: 定義容器環境，包含 noVNC、x11vnc、Firefox 等組件
+- **`run.sh`**: 智能啟動腳本，支持動態配置和 Cloudflare Tunnel 模式
+- **`build.sh`**: 標準化構建腳本，確保一致的鏡像構建
+
+#### 測試文件
+- **`test-cloudflare.sh`**: 驗證 Cloudflare Tunnel 兼容性
+- **`test-subdomain-local.sh`**: 使用 `/etc/hosts` 模擬子域名測試
+- **`cleanup-test.sh`**: 清理測試配置，恢復 `/etc/hosts`
+
+#### 部署文件
+- **`docker-compose.cloudflare.yml`**: Cloudflare Tunnel 專用部署配置
+- **`CLOUDFLARE-TUNNEL-GUIDE.md`**: 詳細的 Cloudflare Tunnel 設置指南
+
+#### 已棄用文件（保留用於參考）
+- **`deploy-subdomain.sh`**: 舊版 Nginx/SSL 子域名部署
+- **`docker-compose.subdomain.yml`**: 舊版 Nginx 配置
+- **`nginx-subdomain.conf`**: 舊版 Nginx 配置文件
+- **`TROUBLESHOOTING-SUBDOMAIN.md`**: 舊版問題排查文檔
+
+## 快速開始
+
+### 基本使用
 
 ```bash
-docker build -t vnc-base .
+# 構建鏡像
+./build.sh
+
+# 啟動容器（localhost 模式）
+./run.sh
+
+# 啟動容器（Cloudflare Tunnel 模式）
+./run.sh -H 0.0.0.0 -d
 ```
 
-### Basic Run
+### 動態配置
+
+支持多種配置方式：
 
 ```bash
-docker run -d \
-  --name vnc-base \
-  -p 6080:6080 \
-  -p 5900:5900 \
-  vnc-base
+# 命令行參數
+./run.sh -H 0.0.0.0 -p 8080 -d
+
+# 環境變量
+VNC_HOST=0.0.0.0 VNC_PORT=8080 ./run.sh -d
+
+# 環境文件
+./run.sh -e .env -d
 ```
 
-### Access the Desktop
-
-- **Web Browser**: Open `http://localhost:6080` in your browser
-- **VNC Client**: Connect to `localhost:5900` using any VNC client
-
-## Advanced Usage
-
-### With Custom Ports
+### Cloudflare Tunnel 部署
 
 ```bash
-docker run -d \
-  --name vnc-base \
-  -p 8080:6080 \
-  -p 5901:5900 \
-  vnc-base
+# 構建並啟動（支持 Cloudflare Tunnel）
+./build.sh
+./run.sh -H 0.0.0.0 -d
+
+# 運行兼容性測試
+./test-cloudflare.sh
+
+# 查看部署指南
+cat CLOUDFLARE-TUNNEL-GUIDE.md
 ```
 
-### With Resource Limits
+## 配置選項
+
+### 環境變量
+
+| 變量名 | 默認值 | 說明 |
+|--------|--------|------|
+| `VNC_HOST` | `0.0.0.0` | VNC 服務綁定地址 |
+| `VNC_PORT` | `6080` | VNC Web 端口 |
+| `VNC_BACKEND_HOST` | `localhost` | VNC 後端主機 |
+| `VNC_BACKEND_PORT` | `5900` | VNC 後端端口 |
+| `CLOUDFLARE_TUNNEL` | `0` | Cloudflare Tunnel 模式標識 |
+
+### 命令行選項
 
 ```bash
-docker run -d \
-  --name vnc-base \
-  -p 6080:6080 \
-  -p 5900:5900 \
-  --memory="1g" \
-  --cpus="1.0" \
-  vnc-base
+./run.sh [選項]
+
+選項:
+  -H, --host HOST        VNC 主機地址 (默認: 0.0.0.0)
+  -p, --port PORT        VNC 端口 (默認: 6080)
+  -d, --detach           後台運行
+  -v, --volume PATH      掛載卷
+  -e, --env-file FILE    環境變量文件
+  -m, --memory SIZE      內存限制
+  -c, --cpus COUNT       CPU 限制
+  -h, --help             顯示幫助
 ```
 
-### With Volume Mounts
+## 安全考慮
+
+### HTTP vs HTTPS
+
+1. **本地開發**: 使用 HTTP，適合開發和測試
+2. **Cloudflare Tunnel**: 
+   - 用戶 ↔ Cloudflare: HTTPS (由 Cloudflare 處理)
+   - Cloudflare ↔ 容器: HTTP (內部通信)
+   - 整體安全性由 Cloudflare Zero Trust 保障
+
+### 安全最佳實踐
+
+1. **網絡隔離**: 容器僅在內部網絡運行
+2. **Cloudflare 保護**: 利用 Cloudflare 的 DDoS 防護和 WAF
+3. **訪問控制**: 通過 Cloudflare Zero Trust 控制訪問
+4. **定期更新**: 保持容器鏡像和依賴更新
+
+## 故障排除
+
+### 常見問題
+
+1. **端口衝突**: 檢查端口是否被佔用
+2. **子域名問題**: 運行 `./test-subdomain-local.sh` 進行診斷
+3. **Cloudflare 連接**: 運行 `./test-cloudflare.sh` 驗證配置
+
+### 日誌查看
 
 ```bash
-docker run -d \
-  --name vnc-base \
-  -p 6080:6080 \
-  -p 5900:5900 \
-  -v $(pwd)/shared:/home/shared \
-  vnc-base
-```
-
-## Container Details
-
-### Ports
-
-| Port | Service | Description |
-|------|---------|-------------|
-| 6080 | noVNC | Web VNC client interface |
-| 5900 | x11vnc | Traditional VNC server |
-
-### Services
-
-The container runs the following services managed by Supervisor:
-
-1. **Xvfb**: Virtual framebuffer for X11
-2. **Openbox**: Window manager
-3. **x11vnc**: VNC server
-4. **noVNC**: Web VNC proxy
-5. **Firefox**: Web browser
-
-### File Structure
-
-```
-/opt/novnc/          # noVNC installation
-/opt/scripts/        # Startup and management scripts
-/etc/supervisor/     # Supervisor configuration
-```
-
-## Environment Variables
-
-This container doesn't use environment variables for configuration. All settings are hardcoded for simplicity.
-
-## Troubleshooting
-
-### Check Container Status
-
-```bash
-# View container logs
+# 查看容器日誌
 docker logs vnc-base
 
-# Check if container is running
-docker ps | grep vnc-base
-
-# Access container shell
-docker exec -it vnc-base bash
+# 查看特定服務日誌
+docker exec vnc-base cat /var/log/novnc.log
+docker exec vnc-base cat /var/log/x11vnc.log
 ```
 
-### Common Issues
+## 開發指南
 
-1. **Port Already in Use**
-   ```bash
-   # Check what's using the port
-   lsof -i :6080
-   
-   # Use different ports
-   docker run -d --name vnc-base -p 8080:6080 -p 5901:5900 vnc-base
-   ```
+### 添加新功能
 
-2. **Container Won't Start**
-   ```bash
-   # Check detailed logs
-   docker logs vnc-base
-   
-   # Check system resources
-   docker stats vnc-base
-   ```
+1. 修改 `Dockerfile` 添加依賴
+2. 更新 `run.sh` 添加配置選項
+3. 更新文檔和測試腳本
 
-3. **VNC Connection Issues**
-   - Ensure ports are correctly mapped
-   - Check firewall settings
-   - Verify container is running
-
-### Debug Commands
+### 測試流程
 
 ```bash
-# Check service status inside container
-docker exec vnc-base supervisorctl status
+# 1. 構建測試
+./build.sh
 
-# View X11 display info
-docker exec vnc-base DISPLAY=:1 xdpyinfo
+# 2. 本地測試
+./run.sh -d
+./test-subdomain-local.sh
 
-# Check network connections
-docker exec vnc-base netstat -ln
+# 3. Cloudflare 測試
+./test-cloudflare.sh
+
+# 4. 清理
+./cleanup-test.sh
 ```
 
-## Development
+## 許可證
 
-### Customizing the Image
+MIT License
 
-1. **Add Software Packages**
-   ```dockerfile
-   RUN apt-get update && apt-get install -y \
-       your-package-name \
-       && rm -rf /var/lib/apt/lists/*
-   ```
+## 貢獻
 
-2. **Modify Startup Script**
-   Edit `/opt/scripts/start.sh` in the Dockerfile to customize startup behavior.
-
-3. **Add Custom Files**
-   ```dockerfile
-   COPY your-file /path/in/container
-   ```
-
-### Building Custom Variants
-
-```bash
-# Build with custom tag
-docker build -t my-vnc-base .
-
-# Build with different base image
-# Edit FROM line in Dockerfile
-```
-
-## Security Considerations
-
-⚠️ **Warning**: This container is designed for development and testing environments. For production use:
-
-1. **Add Authentication**: Implement VNC password protection
-2. **Network Security**: Use reverse proxy or VPN
-3. **Resource Limits**: Set appropriate memory and CPU limits
-4. **Regular Updates**: Keep base image updated
-
-## Use Cases
-
-- **Development Environment**: Quick setup for remote development
-- **Testing**: Browser testing in isolated environment
-- **Learning**: Educational purposes for VNC/remote desktop concepts
-- **Demo**: Demonstrating web-based remote desktop capabilities
-
-## Related Projects
-
-- [novnc_llm_cli](../novnc_llm_cli/): Enhanced version with AI tools
-- [novnc_tool](../novnc_tool/): Tool-focused environment
-
-## License
-
-This project is part of the VNC Lab and follows the same MIT license. 
+歡迎提交 Issue 和 Pull Request！ 

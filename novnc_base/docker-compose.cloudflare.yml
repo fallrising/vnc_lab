@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  vnc-base:
+    build: .
+    container_name: vnc-base-cloudflare
+    restart: unless-stopped
+    ports:
+      - "0.0.0.0:6080:6080"
+      - "0.0.0.0:5900:5900"
+    environment:
+      - VNC_HOST=0.0.0.0
+      - VNC_PORT=6080
+      - VNC_BACKEND_HOST=localhost
+      - VNC_BACKEND_PORT=5900
+      - CLOUDFLARE_TUNNEL=1
+    volumes:
+      - vnc-data:/home/shared
+    networks:
+      - vnc-network
+
+  # Optional: Cloudflare Tunnel (if you want to run it in the same compose)
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: vnc-cloudflared
+    restart: unless-stopped
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - vnc-base
+    networks:
+      - vnc-network
+    profiles:
+      - tunnel  # Only start if explicitly requested
+
+volumes:
+  vnc-data:
+
+networks:
+  vnc-network:
+    driver: bridge 
