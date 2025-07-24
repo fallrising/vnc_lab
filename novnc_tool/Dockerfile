@@ -42,6 +42,96 @@ RUN mkdir -p /app/conf.d
 # Create Firefox profile directory for persistence
 RUN mkdir -p /home/firefox-profile
 
+# Add custom index.html for subdomain compatibility
+COPY <<EOF /opt/novnc/index.html
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>noVNC</title>
+    <style>
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        #screen {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="screen"></div>
+    <script type="module">
+        import RFB from './core/rfb.js';
+        
+        // Dynamic WebSocket URL resolution for subdomain support
+        function getWebSocketURL() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const host = window.location.host;
+            const path = window.location.pathname.replace(/\/$/, '');
+            
+            // Use current host for WebSocket connection (works for both localhost and subdomain)
+            return `${protocol}//${host}${path}/websockify`;
+        }
+        
+        // Initialize RFB connection
+        function initVNC() {
+            const rfb = new RFB(document.getElementById('screen'), getWebSocketURL(), {
+                credentials: { password: '' },
+                wsProtocols: ['binary']
+            });
+
+            rfb.addEventListener('connect', () => {
+                console.log('Connected to VNC server');
+            });
+
+            rfb.addEventListener('disconnect', (e) => {
+                console.log('Disconnected from VNC server:', e.detail.clean ? 'clean' : 'dirty');
+            });
+
+            rfb.addEventListener('credentialsrequired', () => {
+                console.log('Credentials required');
+            });
+
+            rfb.addEventListener('securityfailure', (e) => {
+                console.log('Security failure:', e.detail.reason);
+            });
+
+            rfb.addEventListener('clipboard', (e) => {
+                console.log('Clipboard event:', e.detail.text);
+            });
+
+            rfb.addEventListener('bell', () => {
+                console.log('Bell event');
+            });
+
+            rfb.addEventListener('desktopname', (e) => {
+                console.log('Desktop name:', e.detail.name);
+            });
+
+            rfb.addEventListener('capabilities', (e) => {
+                console.log('Capabilities:', e.detail.capabilities);
+            });
+
+            // Handle window resize
+            window.addEventListener('resize', () => {
+                rfb.scaleViewport = true;
+                rfb.resizeSession = true;
+            });
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', initVNC);
+    </script>
+</body>
+</html>
+EOF
+
 # Create Firefox supervisor config file in /app/conf.d directory with profile persistence
 RUN echo '[program:firefox]' > /app/conf.d/firefox.conf && \
     echo 'command=/usr/bin/firefox-esr --display=:0 --new-instance --profile /home/firefox-profile' >> /app/conf.d/firefox.conf && \
