@@ -11,13 +11,41 @@ VNC Lab is a containerized remote desktop solution based on noVNC technology, al
 ```
 vnc_lab/
 ├── novnc_base/           # Basic VNC desktop environment
-│   └── Dockerfile       # Basic container configuration
+│   ├── Dockerfile       # Basic container configuration
+│   ├── build.sh         # Build script
+│   ├── run.sh           # Run script
+│   ├── clean.sh         # Clean script
+│   ├── test_base.sh     # Test script
+│   └── README.md        # Detailed usage instructions
+├── novnc_cursor/        # Cursor IDE VNC environment
+│   ├── Dockerfile       # CPU version configuration
+│   ├── Dockerfile.gpu   # GPU version configuration
+│   ├── build.sh         # Build script with GPU support
+│   ├── run.sh           # Run script with GPU support
+│   ├── test_cursor.sh   # Test script with GPU support
+│   └── README.md        # Detailed usage instructions
 ├── novnc_llm_cli/       # VNC environment with AI CLI tools integration
 │   ├── Dockerfile       # Main container configuration
 │   ├── Dockerfile.add_validation  # Container config with validation features
+│   ├── build.sh         # Build script
+│   ├── run.sh           # Run script
+│   ├── test_llm.sh      # Test script for AI tools
 │   └── README.md        # Detailed usage instructions
 ├── novnc_tool/          # Tool environment based on theasp/novnc
-│   └── Dockerfile       # Tool container configuration
+│   ├── Dockerfile       # Tool container configuration
+│   ├── build.sh         # Build script
+│   ├── run.sh           # Run script
+│   ├── test_tool.sh     # Test script for development tools
+│   └── README.md        # Detailed usage instructions
+├── novnc_warp/          # Warp terminal VNC environment
+│   ├── Dockerfile       # CPU version configuration
+│   ├── Dockerfile.gpu   # GPU version configuration
+│   ├── build.sh         # Build script with GPU support
+│   ├── run.sh           # Run script with GPU support
+│   ├── test_warp.sh     # Test script for Warp functionality
+│   └── README.md        # Detailed usage instructions
+├── manage.sh            # Unified management script for all containers
+├── push_all.sh          # Push all images to Docker Hub
 └── README.md           # Project documentation
 ```
 
@@ -31,13 +59,32 @@ vnc_lab/
 - Pre-installed Firefox ESR browser
 - Openbox window manager
 - Supervisor process management support
+- Cloudflare Tunnel compatibility
+- Subdomain support for dynamic access
 
 **Use Cases:**
 - Basic remote desktop access
 - Lightweight web browsing environment
 - Learning and testing environments
+- Foundation for other specialized containers
 
-### 2. novnc_llm_cli - AI Tools Integration Environment
+### 2. novnc_cursor - Cursor IDE Environment
+
+**Features:**
+- All features from the basic environment
+- Integrated Cursor IDE with AI capabilities
+- AMD GPU acceleration support (optional)
+- Enhanced graphics performance
+- Secure local binding with reverse proxy support
+- Persistent configuration and workspace storage
+
+**Use Cases:**
+- AI-assisted development
+- Remote development environments
+- GPU-accelerated coding
+- Modern IDE experience through browser
+
+### 3. novnc_llm_cli - AI Tools Integration Environment
 
 **Features:**
 - All features from the basic environment
@@ -55,7 +102,7 @@ vnc_lab/
 - Remote development environments
 - Work environments requiring AI tool assistance
 
-### 3. novnc_tool - Enhanced Tools Environment
+### 4. novnc_tool - Enhanced Tools Environment
 
 **Features:**
 - Based on `theasp/novnc` image
@@ -69,6 +116,22 @@ vnc_lab/
 - Tool integration testing
 - Multi-service management requirements
 
+### 5. novnc_warp - Warp Terminal Environment
+
+**Features:**
+- All features from the basic environment
+- Integrated Warp terminal with AI capabilities
+- AMD GPU acceleration support (optional)
+- Enhanced terminal experience
+- AI-powered command assistance
+- Persistent configuration and workspace storage
+
+**Use Cases:**
+- Modern terminal experience
+- AI-assisted command line work
+- GPU-accelerated terminal operations
+- Remote terminal access through browser
+
 ## Quick Start
 
 ### Requirements
@@ -76,27 +139,150 @@ vnc_lab/
 - Docker 20.10+
 - At least 2GB available memory
 - Network connection (for downloading images and tools)
+- AMD GPU (optional, for GPU-accelerated containers)
+
+### Build Order
+
+Due to dependencies, build containers in this order:
+
+1. **Build base image first:**
+```bash
+cd novnc_base
+./build.sh
+```
+
+2. **Build specialized containers:**
+```bash
+# Cursor IDE (CPU version)
+cd ../novnc_cursor
+./build.sh
+
+# Cursor IDE (GPU version - requires AMD GPU)
+./build.sh --gpu
+
+# AI Tools environment
+cd ../novnc_llm_cli
+./build.sh
+
+# Tool environment
+cd ../novnc_tool
+./build.sh
+
+# Warp terminal (CPU version)
+cd ../novnc_warp
+./build.sh
+
+# Warp terminal (GPU version - requires AMD GPU)
+./build.sh --gpu
+```
 
 ### Basic Usage
 
-1. **Build base image:**
+#### 1. Base Environment
 ```bash
 cd novnc_base
-docker build -t vnc-base .
+./run.sh
+# Access: http://localhost:6080
 ```
 
-2. **Run base container:**
+#### 2. Cursor IDE Environment
 ```bash
-docker run -d \
-  --name vnc-base \
-  -p 6080:6080 \
-  -p 5900:5900 \
-  vnc-base
+cd novnc_cursor
+# CPU version
+./run.sh
+
+# GPU version (if AMD GPU available)
+./run.sh --gpu
+
+# Access: http://localhost:6080
 ```
 
-3. **Access desktop:**
-   - Open browser and visit: `http://localhost:6080`
-   - Or use VNC client to connect: `localhost:5900`
+#### 3. AI Tools Environment
+```bash
+cd novnc_llm_cli
+./run.sh
+# Access: http://localhost:6080 (Desktop), http://localhost:7681 (Terminal)
+```
+
+#### 4. Tool Environment
+```bash
+cd novnc_tool
+./run.sh
+# Access: http://localhost:8080 (Desktop), http://localhost:7681 (Terminal)
+```
+
+#### 5. Warp Terminal Environment
+```bash
+cd novnc_warp
+# CPU version
+./run.sh
+
+# GPU version (if AMD GPU available)
+./run.sh --gpu
+
+# Access: http://localhost:6080
+```
+
+### Unified Management
+
+Use the root `manage.sh` script for unified management:
+
+```bash
+# Build all containers
+./manage.sh build all
+
+# Run specific container
+./manage.sh run novnc_cursor
+
+# Check status of all containers
+./manage.sh status
+
+# Clean all resources
+./manage.sh clean all
+
+### Testing
+
+Each container has a dedicated test script:
+
+```bash
+# Test base environment
+cd novnc_base && ./test_base.sh
+
+# Test Cursor IDE (including GPU support)
+cd novnc_cursor && ./test_cursor.sh --gpu
+
+# Test AI tools environment
+cd novnc_llm_cli && ./test_llm.sh --ai-tools
+
+# Test development tools
+cd novnc_tool && ./test_tool.sh --tools
+
+# Test Warp terminal (including GPU support)
+cd novnc_warp && ./test_warp.sh --gpu
+
+### Pushing to Docker Hub
+
+Push all images to u80250docker Docker Hub account:
+
+```bash
+# Push all images (latest tags only)
+./push_all.sh --latest
+
+# Push all images including GPU versions
+./push_all.sh --gpu
+
+# Push specific container with GPU support
+./push_all.sh --cursor --gpu
+
+# Dry run to see what would be pushed
+./push_all.sh --dry-run
+
+# Push specific version
+./push_all.sh --version v1.0.0
+```
+
+Images will be available at: https://hub.docker.com/r/u80250docker
+```
 
 ### AI Tools Environment Usage
 

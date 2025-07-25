@@ -45,24 +45,9 @@ RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-# Download and install Cursor IDE
-RUN wget -O /tmp/cursor.deb "https://download.cursor.sh/linux/appImage/x64" \
-    && dpkg -i /tmp/cursor.deb || true \
-    && apt-get install -f -y \
-    && rm /tmp/cursor.deb \
-    && rm -rf /var/lib/apt/lists/*
-
-# Create user for better security
-RUN useradd -m -s /bin/bash cursor \
-    && mkdir -p /home/cursor/workspace \
-    && chown -R cursor:cursor /home/cursor
-
-# Create Cursor profile directory for persistence
-RUN mkdir -p /home/cursor/.config/Cursor \
-    && chown -R cursor:cursor /home/cursor/.config
-
-# Create supervisor config for Cursor IDE (with AMD GPU support)
-RUN echo '[program:cursor]' > /app/conf.d/cursor.conf && \
+# Create supervisor config directory and config for Cursor IDE (with AMD GPU support)
+RUN mkdir -p /app/conf.d && \
+    echo '[program:cursor]' > /app/conf.d/cursor.conf && \
     echo 'command=/usr/bin/cursor --display=:0 --enable-gpu-rasterization --enable-zero-copy' >> /app/conf.d/cursor.conf && \
     echo 'environment=DISPLAY=":0",HOME="/home/cursor",MESA_GL_VERSION_OVERRIDE="4.5",MESA_GLSL_VERSION_OVERRIDE="450"' >> /app/conf.d/cursor.conf && \
     echo 'autorestart=true' >> /app/conf.d/cursor.conf && \

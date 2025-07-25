@@ -47,7 +47,7 @@ docker build -t vnc-tool .
 ```bash
 docker run -d \
   --name vnc-tool \
-  -p 8080:8080 \
+  -p 6080:6080 \
   -p 7681:7681 \
   -v firefox-profile:/home/firefox-profile \
   vnc-tool
@@ -58,7 +58,7 @@ docker run -d \
 ```bash
 docker run -d \
   --name vnc-tool \
-  -p 127.0.0.1:8080:8080 \
+  -p 127.0.0.1:6080:6080 \
   -p 127.0.0.1:7681:7681 \
   -v firefox-profile:/home/firefox-profile \
   -e TUNNEL_TOKEN="your_cloudflared_token" \
@@ -69,7 +69,7 @@ docker run -d \
 
 | Service | URL | Description |
 |---------|-----|-------------|
-| **Desktop** | `http://localhost:8080` | Web VNC desktop |
+| **Desktop** | `http://localhost:6080` | Web VNC desktop |
 | **Web Terminal** | `http://localhost:7681` | Browser terminal |
 
 ## Environment Variables
@@ -85,7 +85,7 @@ docker run -d \
 ```bash
 docker run -d \
   --name dev-tool \
-  -p 8080:8080 \
+  -p 6080:6080 \
   -p 7681:7681 \
   -v firefox-profile:/home/firefox-profile \
   -v $(pwd)/code:/workspace \
@@ -100,7 +100,7 @@ docker run -d \
 ```bash
 docker run -d \
   --name production-tool \
-  -p 127.0.0.1:8080:8080 \
+  -p 127.0.0.1:6080:6080 \
   -p 127.0.0.1:7681:7681 \
   -v firefox-profile:/home/firefox-profile \
   -v $(pwd)/workspace:/workspace \
@@ -117,7 +117,7 @@ docker run -d \
 ```bash
 docker run -d \
   --name vnc-tool \
-  -p 9000:8080 \
+  -p 9000:6080 \
   -p 9001:7681 \
   -v firefox-profile:/home/firefox-profile \
   vnc-tool
@@ -209,7 +209,7 @@ The container runs the following services managed by Supervisor:
 
 | Port | Service | Description |
 |------|---------|-------------|
-| 8080 | noVNC | Web VNC client |
+| 6080 | noVNC | Web VNC client |
 | 7681 | ttyd | Web terminal |
 
 ## Monitoring and Debugging

@@ -13,7 +13,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-CONTAINERS=("novnc_base" "novnc_llm_cli" "novnc_tool")
+CONTAINERS=("novnc_base" "novnc_cursor" "novnc_llm_cli" "novnc_tool" "novnc_warp")
 
 # Function to print colored output
 print_status() {
@@ -57,6 +57,8 @@ show_usage() {
     echo ""
     echo "Examples:"
     echo "  $0 build all            # Build all containers"
+    echo "  $0 run novnc_cursor     # Run Cursor IDE container"
+    echo "  $0 run novnc_warp       # Run Warp terminal container"
     echo "  $0 run novnc_llm_cli    # Run AI tools container"
     echo "  $0 status               # Show all container status"
     echo "  $0 clean all            # Clean all resources"
@@ -91,6 +93,16 @@ get_containers_to_process() {
 build_container() {
     local container=$1
     print_status "Building $container..."
+    
+    # Check dependencies
+    if [[ "$container" == "novnc_cursor" || "$container" == "novnc_warp" ]]; then
+        if ! docker images "vnc-base:latest" | grep -q "vnc-base"; then
+            print_error "Base image 'vnc-base:latest' not found!"
+            print_status "Please build the base image first:"
+            print_status "  ./manage.sh build novnc_base"
+            return 1
+        fi
+    fi
     
     if [[ -d "$container" ]]; then
         cd "$container"
@@ -251,11 +263,17 @@ show_status() {
             "novnc_base")
                 CONTAINER_NAME="vnc-base-container"
                 ;;
+            "novnc_cursor")
+                CONTAINER_NAME="vnc-cursor-container"
+                ;;
             "novnc_llm_cli")
                 CONTAINER_NAME="vnc-llm-cli-container"
                 ;;
             "novnc_tool")
                 CONTAINER_NAME="vnc-tool-container"
+                ;;
+            "novnc_warp")
+                CONTAINER_NAME="vnc-warp-container"
                 ;;
         esac
         
@@ -271,11 +289,17 @@ show_status() {
             "novnc_base")
                 IMAGE_NAME="vnc-base"
                 ;;
+            "novnc_cursor")
+                IMAGE_NAME="vnc-cursor"
+                ;;
             "novnc_llm_cli")
                 IMAGE_NAME="vnc-llm-cli"
                 ;;
             "novnc_tool")
                 IMAGE_NAME="vnc-tool"
+                ;;
+            "novnc_warp")
+                IMAGE_NAME="vnc-warp"
                 ;;
         esac
         
@@ -299,11 +323,17 @@ show_logs() {
         "novnc_base")
             container_name="vnc-base-container"
             ;;
+        "novnc_cursor")
+            container_name="vnc-cursor-container"
+            ;;
         "novnc_llm_cli")
             container_name="vnc-llm-cli-container"
             ;;
         "novnc_tool")
             container_name="vnc-tool-container"
+            ;;
+        "novnc_warp")
+            container_name="vnc-warp-container"
             ;;
     esac
     
@@ -324,11 +354,17 @@ stop_container() {
         "novnc_base")
             container_name="vnc-base-container"
             ;;
+        "novnc_cursor")
+            container_name="vnc-cursor-container"
+            ;;
         "novnc_llm_cli")
             container_name="vnc-llm-cli-container"
             ;;
         "novnc_tool")
             container_name="vnc-tool-container"
+            ;;
+        "novnc_warp")
+            container_name="vnc-warp-container"
             ;;
     esac
     

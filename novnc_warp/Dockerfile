@@ -37,8 +37,9 @@ RUN useradd -m -s /bin/bash warp \
 RUN mkdir -p /home/warp/.config/warp \
     && chown -R warp:warp /home/warp/.config
 
-# Create supervisor config for Warp terminal
-RUN echo '[program:warp]' > /app/conf.d/warp.conf && \
+# Create supervisor config directory and config for Warp terminal
+RUN mkdir -p /app/conf.d && \
+    echo '[program:warp]' > /app/conf.d/warp.conf && \
     echo 'command=/usr/bin/warp --display=:0' >> /app/conf.d/warp.conf && \
     echo 'environment=DISPLAY=":0",HOME="/home/warp",PATH="/root/.cargo/bin:${PATH}"' >> /app/conf.d/warp.conf && \
     echo 'autorestart=true' >> /app/conf.d/warp.conf && \

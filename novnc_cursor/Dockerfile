@@ -36,8 +36,9 @@ RUN useradd -m -s /bin/bash cursor \
 RUN mkdir -p /home/cursor/.config/Cursor \
     && chown -R cursor:cursor /home/cursor/.config
 
-# Create supervisor config for Cursor IDE
-RUN echo '[program:cursor]' > /app/conf.d/cursor.conf && \
+# Create supervisor config directory and config for Cursor IDE
+RUN mkdir -p /app/conf.d && \
+    echo '[program:cursor]' > /app/conf.d/cursor.conf && \
     echo 'command=/usr/bin/cursor --no-sandbox --disable-gpu --display=:0' >> /app/conf.d/cursor.conf && \
     echo 'environment=DISPLAY=":0",HOME="/home/cursor"' >> /app/conf.d/cursor.conf && \
     echo 'autorestart=true' >> /app/conf.d/cursor.conf && \

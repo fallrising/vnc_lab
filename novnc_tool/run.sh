@@ -16,7 +16,7 @@ NC='\033[0m' # No Color
 IMAGE_NAME="vnc-tool"
 DEFAULT_TAG="latest"
 CONTAINER_NAME="vnc-tool-container"
-DEFAULT_VNC_PORT="8080"
+DEFAULT_VNC_PORT="6080"
 DEFAULT_TERMINAL_PORT="7681"
 
 # Function to print colored output

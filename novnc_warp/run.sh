@@ -51,6 +51,7 @@ show_usage() {
     echo "  -v, --volume PATH       Mount volume (format: host:container)"
     echo "  -m, --memory SIZE       Memory limit (e.g., 2g, 4g)"
     echo "  --cpus NUM              CPU limit (e.g., 1.0, 2.0)"
+    echo "  --gpu-memory SIZE       GPU memory limit (e.g., 2g, 4g)"
     echo "  --env-file FILE         Load environment variables from file"
     echo "  --no-gpu                Force CPU-only mode even with GPU image"
     echo "  -h, --help              Show this help message"
@@ -76,6 +77,7 @@ RM=""
 VOLUMES=""
 MEMORY=""
 CPUS=""
+GPU_MEMORY=""
 ENV_FILE=""
 
 while [[ $# -gt 0 ]]; do
@@ -123,6 +125,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --cpus)
             CPUS="--cpus=$2"
+            shift 2
+            ;;
+        --gpu-memory)
+            GPU_MEMORY="$2"
             shift 2
             ;;
         --env-file)
