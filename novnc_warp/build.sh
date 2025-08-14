@@ -14,7 +14,7 @@ NC='\033[0m' # No Color
 
 # Configuration
 DOCKER_HUB_ACCOUNT="u80250docker"
-IMAGE_NAME="vnc-warp"
+IMAGE_NAME="novnc-warp"
 DEFAULT_TAG="latest"
 DEFAULT_DOCKERFILE="Dockerfile"
 DEFAULT_ARCH="amd64"
@@ -76,7 +76,7 @@ while [[ $# -gt 0 ]]; do
             ;; 
         --gpu)
             DOCKERFILE="Dockerfile.gpu"
-            IMAGE_NAME="vnc-warp-gpu"
+            IMAGE_NAME="novnc-warp-gpu"
             shift
             ;; 
         --arch)
@@ -117,8 +117,8 @@ fi
 
 # Check if base image exists
 BASE_IMAGE_TAG="$DEFAULT_TAG-$ARCH"
-if ! docker images "$DOCKER_HUB_ACCOUNT/vnc-base:$BASE_IMAGE_TAG" | grep -q "vnc-base"; then
-    print_warning "Base image '$DOCKER_HUB_ACCOUNT/vnc-base:$BASE_IMAGE_TAG' not found!"
+if ! docker images "$DOCKER_HUB_ACCOUNT/novnc-base:$BASE_IMAGE_TAG" | grep -q "novnc-base"; then
+    print_warning "Base image '$DOCKER_HUB_ACCOUNT/novnc-base:$BASE_IMAGE_TAG' not found!"
     print_status "Please build the base image first for architecture $ARCH:"
     print_status "  cd ../novnc_base && ./build.sh --arch $ARCH"
     exit 1
@@ -133,7 +133,7 @@ print_status "Using Dockerfile: $DOCKERFILE"
 
 docker buildx build \
     --platform "$PLATFORM" \
-    --build-arg BASE_IMAGE=$DOCKER_HUB_ACCOUNT/vnc-base:$DEFAULT_TAG-$ARCH \
+    --build-arg BASE_IMAGE=$DOCKER_HUB_ACCOUNT/novnc-base:$DEFAULT_TAG-$ARCH \
     -f "$DOCKERFILE" \
     -t "$FULL_IMAGE_NAME" \
     $BUILD_ARGS \

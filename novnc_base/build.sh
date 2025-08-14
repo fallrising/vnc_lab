@@ -14,7 +14,7 @@ NC='\033[0m' # No Color
 
 # Configuration
 DOCKER_HUB_ACCOUNT="u80250docker"
-IMAGE_NAME="vnc-base"
+IMAGE_NAME="novnc-base"
 DEFAULT_TAG="latest"
 DOCKERFILE="Dockerfile"
 DEFAULT_ARCH="amd64"

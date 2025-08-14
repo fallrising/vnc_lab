@@ -96,8 +96,8 @@ build_container() {
     
     # Check dependencies
     if [[ "$container" == "novnc_cursor" || "$container" == "novnc_warp" ]]; then
-        if ! docker images "vnc-base:latest" | grep -q "vnc-base"; then
-            print_error "Base image 'vnc-base:latest' not found!"
+        if ! docker images "novnc-base:latest" | grep -q "novnc-base"; then
+            print_error "Base image 'novnc-base:latest' not found!"
             print_status "Please build the base image first:"
             print_status "  ./manage.sh build novnc_base"
             return 1
@@ -261,19 +261,19 @@ show_status() {
         CONTAINER_NAME=""
         case $container in
             "novnc_base")
-                CONTAINER_NAME="vnc-base-container"
+                CONTAINER_NAME="novnc-base-container"
                 ;;
             "novnc_cursor")
-                CONTAINER_NAME="vnc-cursor-container"
+                CONTAINER_NAME="novnc-cursor-container"
                 ;;
             "novnc_llm_cli")
-                CONTAINER_NAME="vnc-llm-cli-container"
+                CONTAINER_NAME="novnc-llm-cli-container"
                 ;;
             "novnc_tool")
-                CONTAINER_NAME="vnc-tool-container"
+                CONTAINER_NAME="novnc-tool-container"
                 ;;
             "novnc_warp")
-                CONTAINER_NAME="vnc-warp-container"
+                CONTAINER_NAME="novnc-warp-container"
                 ;;
         esac
         
@@ -287,19 +287,19 @@ show_status() {
         IMAGE_NAME=""
         case $container in
             "novnc_base")
-                IMAGE_NAME="vnc-base"
+                IMAGE_NAME="novnc-base"
                 ;;
             "novnc_cursor")
-                IMAGE_NAME="vnc-cursor"
+                IMAGE_NAME="novnc-cursor"
                 ;;
             "novnc_llm_cli")
-                IMAGE_NAME="vnc-llm-cli"
+                IMAGE_NAME="novnc-llm-cli"
                 ;;
             "novnc_tool")
-                IMAGE_NAME="vnc-tool"
+                IMAGE_NAME="novnc-tool"
                 ;;
             "novnc_warp")
-                IMAGE_NAME="vnc-warp"
+                IMAGE_NAME="novnc-warp"
                 ;;
         esac
         
@@ -321,19 +321,19 @@ show_logs() {
     
     case $container in
         "novnc_base")
-            container_name="vnc-base-container"
+            container_name="novnc-base-container"
             ;;
         "novnc_cursor")
-            container_name="vnc-cursor-container"
+            container_name="novnc-cursor-container"
             ;;
         "novnc_llm_cli")
-            container_name="vnc-llm-cli-container"
+            container_name="novnc-llm-cli-container"
             ;;
         "novnc_tool")
-            container_name="vnc-tool-container"
+            container_name="novnc-tool-container"
             ;;
         "novnc_warp")
-            container_name="vnc-warp-container"
+            container_name="novnc-warp-container"
             ;;
     esac
     
@@ -352,19 +352,19 @@ stop_container() {
     
     case $container in
         "novnc_base")
-            container_name="vnc-base-container"
+            container_name="novnc-base-container"
             ;;
         "novnc_cursor")
-            container_name="vnc-cursor-container"
+            container_name="novnc-cursor-container"
             ;;
         "novnc_llm_cli")
-            container_name="vnc-llm-cli-container"
+            container_name="novnc-llm-cli-container"
             ;;
         "novnc_tool")
-            container_name="vnc-tool-container"
+            container_name="novnc-tool-container"
             ;;
         "novnc_warp")
-            container_name="vnc-warp-container"
+            container_name="novnc-warp-container"
             ;;
     esac
     
