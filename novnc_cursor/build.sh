@@ -13,9 +13,11 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
+DOCKER_HUB_ACCOUNT="u80250docker"
 IMAGE_NAME="vnc-cursor"
 DEFAULT_TAG="latest"
 DEFAULT_DOCKERFILE="Dockerfile"
+DEFAULT_ARCH="amd64"
 
 # Function to print colored output
 print_status() {
@@ -42,20 +44,24 @@ show_usage() {
     echo "  -t, --tag TAG       Image tag (default: $DEFAULT_TAG)"
     echo "  -f, --file FILE     Dockerfile to use (default: $DEFAULT_DOCKERFILE)"
     echo "  --gpu               Build GPU version (uses Dockerfile.gpu)"
+    echo "  --arch ARCH         Architecture to build for (default: $DEFAULT_ARCH)"
+    echo "  --push              Push the image to Docker Hub"
     echo "  --no-cache          Build without cache"
     echo "  -h, --help          Show this help message"
     echo ""
     echo "Examples:"
-    echo "  $0                    # Build standard version"
-    echo "  $0 --gpu             # Build GPU version"
-    echo "  $0 -t v1.0.0         # Build with specific tag"
-    echo "  $0 --gpu -t gpu-v1.0 # Build GPU version with tag"
-    echo "  $0 --no-cache        # Build without cache"
+    echo "  $0                    # Build standard amd64 version"
+    echo "  $0 --arch arm64      # Build standard arm64 version"
+    echo "  $0 --gpu             # Build GPU amd64 version"
+    echo "  $0 --gpu --arch arm64 # Build GPU arm64 version"
+    echo "  $0 --push             # Build and push amd64 version"
 }
 
 # Parse command line arguments
 TAG=$DEFAULT_TAG
 DOCKERFILE=$DEFAULT_DOCKERFILE
+ARCH=$DEFAULT_ARCH
+PUSH_IMAGE=false
 BUILD_ARGS=""
 
 while [[ $# -gt 0 ]]; do
@@ -63,29 +69,37 @@ while [[ $# -gt 0 ]]; do
         -t|--tag)
             TAG="$2"
             shift 2
-            ;;
+            ;; 
         -f|--file)
             DOCKERFILE="$2"
             shift 2
-            ;;
+            ;; 
         --gpu)
             DOCKERFILE="Dockerfile.gpu"
             IMAGE_NAME="vnc-cursor-gpu"
             shift
-            ;;
+            ;; 
+        --arch)
+            ARCH="$2"
+            shift 2
+            ;; 
+        --push)
+            PUSH_IMAGE=true
+            shift
+            ;; 
         --no-cache)
             BUILD_ARGS="$BUILD_ARGS --no-cache"
             shift
-            ;;
+            ;; 
         -h|--help)
             show_usage
             exit 0
-            ;;
+            ;; 
         *)
             print_error "Unknown option: $1"
             show_usage
             exit 1
-            ;;
+            ;; 
     esac
 done
 
@@ -102,29 +116,42 @@ if ! docker info >/dev/null 2>&1; then
 fi
 
 # Check if base image exists
-if ! docker images "vnc-base:latest" | grep -q "vnc-base"; then
-    print_warning "Base image 'vnc-base:latest' not found!"
-    print_status "Please build the base image first:"
-    print_status "  cd ../novnc_base && ./build.sh"
+BASE_IMAGE_TAG="$DEFAULT_TAG-$ARCH"
+if ! docker images "$DOCKER_HUB_ACCOUNT/vnc-base:$BASE_IMAGE_TAG" | grep -q "vnc-base"; then
+    print_warning "Base image '$DOCKER_HUB_ACCOUNT/vnc-base:$BASE_IMAGE_TAG' not found!"
+    print_status "Please build the base image first for architecture $ARCH:"
+    print_status "  cd ../novnc_base && ./build.sh --arch $ARCH"
     exit 1
 fi
 
 # Build the image
-print_status "Building $IMAGE_NAME:$TAG..."
+PLATFORM="linux/$ARCH"
+FULL_IMAGE_NAME="$DOCKER_HUB_ACCOUNT/$IMAGE_NAME:$TAG-$ARCH"
+
+print_status "Building $FULL_IMAGE_NAME for platform $PLATFORM..."
 print_status "Using Dockerfile: $DOCKERFILE"
 
-FULL_IMAGE_NAME="$IMAGE_NAME:$TAG"
+docker buildx build \
+    --platform "$PLATFORM" \
+    --build-arg BASE_IMAGE=$DOCKER_HUB_ACCOUNT/vnc-base:$DEFAULT_TAG-$ARCH \
+    -f "$DOCKERFILE" \
+    -t "$FULL_IMAGE_NAME" \
+    $BUILD_ARGS \
+    .
 
-if docker build $BUILD_ARGS -f "$DOCKERFILE" -t "$FULL_IMAGE_NAME" .; then
-    print_success "Image built successfully: $FULL_IMAGE_NAME"
-    
-    # Show image info
-    print_status "Image details:"
-    docker images "$FULL_IMAGE_NAME" --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}\t{{.CreatedAt}}"
-    
-    print_success "Build completed successfully!"
-    print_status "You can now run the container using: ./run.sh"
+if $PUSH_IMAGE; then
+    print_status "Pushing $FULL_IMAGE_NAME..."
+    docker push "$FULL_IMAGE_NAME"
+    print_success "Image pushed successfully: $FULL_IMAGE_NAME"
 else
-    print_error "Build failed!"
-    exit 1
-fi 
+    print_success "Image built successfully: $FULL_IMAGE_NAME"
+    print_warning "To push the image, use the --push flag."
+fi
+
+
+# Show image info
+print_status "Image details:"
+docker images "$FULL_IMAGE_NAME" --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}\t{{.CreatedAt}}"
+
+print_success "Build completed successfully!"
+print_status "You can now run the container using: ./run.sh"

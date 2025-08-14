@@ -1,4 +1,9 @@
+# Multi-platform support enabled
 FROM debian:bullseye-slim
+
+# Build arguments for architecture detection
+ARG TARGETARCH
+ARG TARGETOS
 
 # Install required packages
 RUN apt-get update && apt-get install -y \

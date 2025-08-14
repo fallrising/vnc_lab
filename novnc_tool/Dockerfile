@@ -1,5 +1,10 @@
 # Docker
-FROM theasp/novnc:latest
+ARG BASE_IMAGE=debian:bullseye-slim
+FROM ${BASE_IMAGE}
+
+# Build arguments for multi-platform support
+ARG TARGETARCH
+ARG TARGETOS
 
 USER root
 
@@ -15,14 +20,24 @@ RUN apt-get update && apt-get install -y \
     gnupg2 \
     && rm -rf /var/lib/apt/lists/*
 
-# Install ttyd
-RUN wget -O /usr/local/bin/ttyd https://github.com/tsl0922/ttyd/releases/download/1.7.3/ttyd.x86_64 \
-    && chmod +x /usr/local/bin/ttyd
+# Install ttyd (multi-arch support)
+RUN case ${TARGETARCH} in \
+        amd64) TTYD_ARCH="x86_64" ;; \
+        arm64) TTYD_ARCH="aarch64" ;; \
+        *) echo "Unsupported architecture: ${TARGETARCH}" && exit 1 ;; \
+    esac && \
+    wget -O /usr/local/bin/ttyd https://github.com/tsl0922/ttyd/releases/download/1.7.3/ttyd.$TTYD_ARCH && \
+    chmod +x /usr/local/bin/ttyd
 
-# Install cloudflared
-RUN wget -O cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb \
-    && dpkg -i cloudflared.deb \
-    && rm cloudflared.deb
+# Install cloudflared (multi-arch support)
+RUN case ${TARGETARCH} in \
+        amd64) CLOUDFLARED_ARCH="amd64" ;; \
+        arm64) CLOUDFLARED_ARCH="arm64" ;; \
+        *) echo "Unsupported architecture: ${TARGETARCH}" && exit 1 ;; \
+    esac && \
+    wget -O cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-$CLOUDFLARED_ARCH.deb && \
+    dpkg -i cloudflared.deb && \
+    rm cloudflared.deb
 
 # Install CLI tools via npm
 RUN npm install -g @google/gemini-cli @anthropic-ai/claude-code
@@ -31,7 +46,7 @@ RUN npm install -g @google/gemini-cli @anthropic-ai/claude-code
 RUN mkdir -p -m 755 /etc/apt/keyrings && \
     wget -nv -O- https://acli.atlassian.com/gpg/public-key.asc | gpg --dearmor -o /etc/apt/keyrings/acli-archive-keyring.gpg && \
     chmod go+r /etc/apt/keyrings/acli-archive-keyring.gpg && \
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/acli-archive-keyring.gpg] https://acli.atlassian.com/linux/deb stable main" > /etc/apt/sources.list.d/acli.list && \
+    echo "deb [arch=${TARGETARCH} signed-by=/etc/apt/keyrings/acli-archive-keyring.gpg] https://acli.atlassian.com/linux/deb stable main" > /etc/apt/sources.list.d/acli.list && \
     apt-get update && \
     apt-get install -y acli && \
     rm -rf /var/lib/apt/lists/*

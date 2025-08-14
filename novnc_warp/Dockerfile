@@ -1,7 +1,12 @@
 # novnc_warp - Warp Terminal with VNC Access
 # Based on novnc_base with Warp terminal integration
 
-FROM vnc-base:latest
+ARG BASE_IMAGE=debian:bullseye-slim
+FROM ${BASE_IMAGE}
+
+# Build arguments for multi-platform support
+ARG TARGETARCH
+ARG TARGETOS
 
 USER root
 
@@ -21,12 +26,21 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Rust (required for Warp)
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-ENV PATH="/root/.cargo/bin:${PATH}"
-
-# Install Warp terminal
-RUN curl -fsSL https://releases.warp.dev/install.sh | sh
+# Install terminal (Warp for AMD64, Alacritty for ARM64)
+RUN case ${TARGETARCH} in \
+        amd64) \
+            echo "Installing Warp terminal for AMD64..." && \
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && \
+            export PATH="/root/.cargo/bin:${PATH}" && \
+            curl -fsSL https://releases.warp.dev/install.sh | sh && \
+            ln -s /usr/local/bin/warp /usr/bin/warp ;; \
+        arm64) \
+            echo "Installing xterm terminal for ARM64 (Warp not available)..." && \
+            apt-get update && apt-get install -y xterm && \
+            ln -s /usr/bin/xterm /usr/bin/warp && \
+            rm -rf /var/lib/apt/lists/* ;; \
+        *) echo "Unsupported architecture: ${TARGETARCH}" && exit 1 ;; \
+    esac
 
 # Create user for better security
 RUN useradd -m -s /bin/bash warp \
