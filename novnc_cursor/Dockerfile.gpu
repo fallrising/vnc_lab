@@ -34,7 +34,22 @@ RUN echo "Installing Cursor IDE for ${TARGETARCH}..." && \
     apt-get update && apt-get install -y libfuse2 libnss3 libatk-bridge2.0-0 libdrm2 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libxkbcommon0 libxss1 libasound2 && \
     case ${TARGETARCH} in \
         amd64) \
-            wget -O cursor.AppImage "https://downloads.cursor.com/production/82a3a053262d453a3a053262d453a3a053262d453a3a053262d453a3a053262d453a3a053262d/linux/x64/Cursor-1.4.5-x64.AppImage" ;; \
+            curl 'https://downloads.cursor.com/production/82a3a053262d453a3a053262d453a3a053262d453a3a053262d453a3a053262d453a3a053262d/linux/x64/Cursor-1.4.5-x64.AppImage' \
+                -H 'accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7' \
+                -H 'accept-language: zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7' \
+                -b 'IndrX2ZuSmZramJSX0NIYUZoRzRzUGZ0cENIVHpHNXk0VE0ya2ZiUkVzQU14X2Fub255bW91c1VzZXJJZCI%3D=ImQ4MTBjMGZiLWJlYTUtNDdjOC05MjJmLWVmODRhZmRkZjA2MSI=' \
+                -H 'dnt: 1' \
+                -H 'priority: u=0, i' \
+                -H 'sec-ch-ua: "Not;A=Brand";v="99", "Google Chrome";v="139", "Chromium";v="139"' \
+                -H 'sec-ch-ua-mobile: ?0' \
+                -H 'sec-ch-ua-platform: "macOS"' \
+                -H 'sec-fetch-dest: document' \
+                -H 'sec-fetch-mode: navigate' \
+                -H 'sec-fetch-site: none' \
+                -H 'sec-fetch-user: ?1' \
+                -H 'upgrade-insecure-requests: 1' \
+                -H 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36' \
+                -o cursor.AppImage ;; \
         arm64) \
             curl 'https://downloads.cursor.com/production/af58d92614edb1f72bdd756615d131bf8dfa5299/linux/arm64/Cursor-1.4.5-aarch64.AppImage' \
                 -H 'accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7' \
