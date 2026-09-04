@@ -1,3 +1,12 @@
+> ## ⚠️ 此 repository 已退役（2026-09-04）
+>
+> 內容已遷移至 [`newclear`](https://github.com/fallrising/newclear) 的 [`platform/fanzloud/docs/legacy-vnc_lab`](https://github.com/fallrising/newclear/tree/main/platform/fanzloud/docs/legacy-vnc_lab)。
+>
+> 本 repository 保留為**唯讀歷史存放地**——完整 git 歷史仍在此處,
+> 但新的開發請至後繼者。
+
+---
+
 # VNC Lab - Remote Desktop Laboratory
 
 A Docker-based remote desktop laboratory project that provides multiple VNC desktop environments with web browser access and AI tool integration.
